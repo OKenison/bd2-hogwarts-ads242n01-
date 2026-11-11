@@ -391,15 +391,46 @@ DELIMITER ;
 -- 5. CONTROLE DE TRANSAÇÕES (TCL)
 -- =====================================================================
 -- Questão 26
+START TRANSACTION;
+UPDATE aluno SET saldo_galeoes = saldo_galeoes - 50.00 WHERE nome = 'Draco Malfoy';
+UPDATE aluno SET saldo_galeoes = saldo_galeoes + 50.00 WHERE nome = 'Pansy Parkinson';
+COMMIT;
 
 -- Questão 27
+START TRANSACTION;
+UPDATE casa SET pontos = 0;
+SELECT * FROM casa;
+ROLLBACK;
+SELECT * FROM casa;
+-- Resposta: Sim, o placar voltou aos valores originais pré-transação pois o ROLLBACK desfez completamente as alterações efetuadas.
 
 -- Questão 28
+START TRANSACTION;
+INSERT INTO compra (id_aluno, id_produto, quantidade, data_compra) VALUES (1, 1, 1, '2026-11-10');
+SELECT saldo_galeoes FROM aluno WHERE id_aluno = 1;
+SELECT estoque FROM produto WHERE id_produto = 1;
+ROLLBACK;
+SELECT saldo_galeoes FROM aluno WHERE id_aluno = 1;
+SELECT estoque FROM produto WHERE id_produto = 1;
+-- Explicação: As alterações feitas pelo trigger (desconto no saldo de Harry e baixa no estoque da varinha) foram completamente desfeitas pelo ROLLBACK, pois os efeitos do trigger ocorrem dentro do mesmo contexto transacional do comando acionador.
 
 -- Questão 29
+START TRANSACTION;
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (12, 4, 15, 'Cuidou das estufas no feriado', '2026-11-10');
+
+SAVEPOINT sp_pontos_legitimos;
+
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (6, 2, 100, 'Favoritismo descarado', '2026-11-10');
+
+ROLLBACK TO SAVEPOINT sp_pontos_legitimos;
+COMMIT;
 
 -- Questão 30
--- Resposta:
+SELECT @@autocommit;
+-- Resposta: O valor 1 indica que a opção autocommit está ligada, ou seja, cada instrução SQL individual é confirmada automaticamente logo após sua execução. Se um comando DDL (como CREATE TABLE) for executado no meio de uma transação aberta, ele realiza um COMMIT implícito imediato, confirmando permanentemente todas as operações pendentes realizadas até aquele ponto e encerrando a transação.
+
 
 
 -- =====================================================================
