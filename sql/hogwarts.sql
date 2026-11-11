@@ -762,25 +762,55 @@ ORDER BY pontos DESC;
 -- 8. CONTROLE DE ACESSO (DCL)
 -- =====================================================================
 -- Questão 39
+CREATE USER 'filch'@'localhost' IDENTIFIED BY 'Madame Norra#1';
+CREATE USER 'mcgonagall'@'localhost' IDENTIFIED BY 'Animago#Gato1';
+CREATE USER 'dumbledore'@'localhost' IDENTIFIED BY 'Fenix#Fawkes1';
 
 -- Questão 40
+GRANT SELECT ON hogwarts.vw_placar_casas TO 'filch'@'localhost';
 
 -- Questão 41
+GRANT SELECT, INSERT ON hogwarts.registro_pontos TO 'mcgonagall'@'localhost';
+GRANT SELECT ON hogwarts.aluno TO 'mcgonagall'@'localhost';
+GRANT SELECT ON hogwarts.vw_boletim TO 'mcgonagall'@'localhost';
 
 -- Questão 42
+GRANT ALL PRIVILEGES ON hogwarts.* TO 'dumbledore'@'localhost' WITH GRANT OPTION;
 
 -- Questão 43
+SHOW GRANTS FOR 'filch'@'localhost';
+SHOW GRANTS FOR 'mcgonagall'@'localhost';
 
 -- Questão 44
--- Resultado de cada comando:
+-- Conectado como filch:
+-- SELECT * FROM vw_placar_casas; -- Funciona normalmente e retorna a pontuação das casas.
+-- SELECT * FROM aluno;
+-- Resultado de cada comando: O primeiro comando consulta com sucesso a View. O segundo falha com Error Code: 1142. SELECT command denied to user 'filch'@'localhost' for table 'aluno'.
 
 -- Questão 45
--- Como o trigger conseguiu atualizar a casa:
+-- Conectado como mcgonagall:
+-- a. INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro) VALUES (2, 1, 10, 'Ajudou um colega em Transfiguração', '2026-11-10');
+-- b. UPDATE casa SET pontos = 1000 WHERE id_casa = 1; -- Erro 1142: UPDATE command denied.
+-- Como o trigger conseguiu atualizar a casa: Triggers no MySQL são executados sob a cláusula por padrão DEFINER (o usuário criador do objeto, root/admin), o que permite ao trigger alterar a tabela `casa` mesmo que o usuário acionador (mcgonagall) não possua permissão direta de UPDATE sobre ela.
 
 -- Questão 46
+REVOKE INSERT ON hogwarts.registro_pontos FROM 'mcgonagall'@'localhost';
+SHOW GRANTS FOR 'mcgonagall'@'localhost';
 
 -- Questão 47
--- Vantagem dos papéis:
+CREATE ROLE monitor;
+GRANT SELECT ON hogwarts.vw_boletim TO monitor;
+GRANT SELECT ON hogwarts.vw_placar_casas TO monitor;
+
+CREATE USER 'percy'@'localhost' IDENTIFIED BY 'Monitor#Chefe1';
+GRANT monitor TO 'percy'@'localhost';
+ALTER USER 'percy'@'localhost' DEFAULT ROLE monitor;
+
+-- Vantagem dos papéis: A utilização de papéis (roles) simplifica a gestão de acessos e a manutenção do banco. Em vez de conceder ou revogar individualmente múltiplos privilégios para cada usuário, define-se um conjunto padrão de privilégios no papel; novos monitores precisam apenas receber a atribuição desse papel, e eventuais mudanças de permissões aplicadas à role refletem-se instantaneamente para todos os usuários associados.
 
 -- Questão 48
-
+DROP USER 'filch'@'localhost';
+DROP USER 'mcgonagall'@'localhost';
+DROP USER 'dumbledore'@'localhost';
+DROP USER 'percy'@'localhost';
+DROP ROLE monitor;
