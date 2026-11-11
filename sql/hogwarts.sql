@@ -439,71 +439,242 @@ SELECT @@autocommit;
 -- ---------- Nível 1: filtros e operadores especiais ----------
 
 -- 6.1
+SELECT nome, salario
+FROM professor
+WHERE salario BETWEEN 6000.00 AND 9000.00
+ORDER BY salario DESC;
 
 -- 6.2
+SELECT nome, ano_escolar
+FROM aluno
+WHERE ano_escolar IN (1, 4, 6, 7)
+ORDER BY ano_escolar ASC;
 
 -- 6.3
+SELECT nome
+FROM aluno
+WHERE nome LIKE '_a%';
 
 -- 6.4
+SELECT nome_disc
+FROM disciplina
+WHERE id_prof IS NULL;
 
 -- 6.5
+SELECT nome_produto, preco
+FROM produto
+WHERE preco NOT BETWEEN 5.00 AND 20.00
+ORDER BY preco ASC;
 
 -- 6.6
+SELECT DISTINCT loja
+FROM produto
+ORDER BY loja ASC;
 
 -- ---------- Nível 2: JOINs ----------
 
 -- 6.7
--- Quantos alunos e por quê:
+SELECT a.nome AS aluno, c.nome_casa AS casa
+FROM aluno a
+INNER JOIN casa c ON a.id_casa = c.id_casa
+ORDER BY c.nome_casa ASC, a.nome ASC;
+-- Quantos alunos e por quê: Aparecem 12 alunos. O aluno Teddy Lupin não aparece porque possui id_casa NULL, sendo excluído pela junção interna (INNER JOIN).
 
 -- 6.8
+SELECT a.nome AS aluno, COALESCE(c.nome_casa, 'Aguardando o Chapéu Seletor') AS casa
+FROM aluno a
+LEFT JOIN casa c ON a.id_casa = c.id_casa
+ORDER BY a.nome ASC;
 
 -- 6.9
+SELECT p.nome AS professor
+FROM disciplina d
+RIGHT JOIN professor p ON d.id_prof = p.id_prof
+WHERE d.id_disc IS NULL;
 
 -- 6.10
+SELECT a.nome AS aluno, d.nome_disc AS disciplina, p.nome AS professor, m.nota, m.situacao
+FROM aluno a
+INNER JOIN casa c ON a.id_casa = c.id_casa
+INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+INNER JOIN disciplina d ON m.id_disc = d.id_disc
+LEFT JOIN professor p ON d.id_prof = p.id_prof
+WHERE c.nome_casa = 'Grifinória'
+ORDER BY a.nome ASC, d.nome_disc ASC;
 
 -- 6.11
+SELECT c.id_compra, a.nome AS aluno, p.nome_produto AS produto, p.loja, c.quantidade, c.valor_total, c.data_compra
+FROM compra c
+INNER JOIN aluno a ON c.id_aluno = a.id_aluno
+INNER JOIN produto p ON c.id_produto = p.id_produto
+ORDER BY c.data_compra ASC, c.id_compra ASC;
 
 -- ---------- Nível 3: agrupamento e agregação ----------
 
 -- 6.12
+SELECT d.nome_disc AS disciplina,
+       COUNT(m.id_aluno) AS qtd_alunos,
+       ROUND(AVG(m.nota), 2) AS media_nota,
+       MAX(m.nota) AS maior_nota,
+       MIN(m.nota) AS menor_nota
+FROM disciplina d
+INNER JOIN matricula m ON d.id_disc = m.id_disc
+GROUP BY d.id_disc, d.nome_disc
+HAVING AVG(m.nota) >= 7.0
+ORDER BY media_nota DESC;
 
 -- 6.13
+SELECT c.nome_casa,
+       COUNT(r.id_registro) AS qtd_registros,
+       SUM(CASE WHEN r.pontos > 0 THEN r.pontos ELSE 0 END) AS pontos_ganhos,
+       SUM(CASE WHEN r.pontos < 0 THEN ABS(r.pontos) ELSE 0 END) AS pontos_perdidos,
+       SUM(r.pontos) AS saldo_pontos
+FROM casa c
+LEFT JOIN aluno a ON c.id_casa = a.id_casa
+LEFT JOIN registro_pontos r ON a.id_aluno = r.id_aluno
+GROUP BY c.id_casa, c.nome_casa;
 
 -- 6.14
+SELECT p.loja,
+       COUNT(c.id_compra) AS qtd_compras,
+       SUM(c.valor_total) AS faturamento
+FROM produto p
+INNER JOIN compra c ON p.id_produto = c.id_produto
+GROUP BY p.loja
+HAVING SUM(c.valor_total) > 20.00
+ORDER BY faturamento DESC;
 
 -- 6.15
+SELECT MONTH(data_registro) AS mes,
+       COUNT(*) AS qtd_registros,
+       SUM(pontos) AS total_pontos
+FROM registro_pontos
+GROUP BY MONTH(data_registro)
+ORDER BY mes ASC;
 
 -- 6.16
+SELECT p.nome AS professor,
+       COUNT(r.id_registro) AS qtd_registros,
+       SUM(r.pontos) AS total_concedido
+FROM professor p
+INNER JOIN registro_pontos r ON p.id_prof = r.id_prof
+GROUP BY p.id_prof, p.nome
+HAVING COUNT(r.id_registro) >= 2
+ORDER BY total_concedido DESC;
 
 -- ---------- Nível 4: subconsultas ----------
 
 -- 6.17
+SELECT nome
+FROM aluno
+WHERE id_aluno IN (
+    SELECT id_aluno
+    FROM compra
+    WHERE id_produto IN (
+        SELECT id_produto
+        FROM produto
+        WHERE loja = 'Dedosdemel'
+    )
+);
 
 -- 6.18
+SELECT nome_produto, estoque
+FROM produto
+WHERE id_produto NOT IN (
+    SELECT DISTINCT id_produto
+    FROM compra
+);
 
 -- 6.19
+SELECT nome, saldo_galeoes
+FROM aluno
+WHERE saldo_galeoes > (
+    SELECT AVG(saldo_galeoes)
+    FROM aluno
+);
 
 -- 6.20
+SELECT nome, salario
+FROM professor
+WHERE salario > ALL (
+    SELECT salario
+    FROM professor
+    WHERE id_casa IS NULL
+);
 
 -- 6.21
--- > ANY equivale a:
+SELECT nome, saldo_galeoes
+FROM aluno
+WHERE (id_casa IS NULL OR id_casa <> (SELECT id_casa FROM casa WHERE nome_casa = 'Sonserina'))
+  AND saldo_galeoes > ANY (
+      SELECT saldo_galeoes
+      FROM aluno
+      WHERE id_casa = (SELECT id_casa FROM casa WHERE nome_casa = 'Sonserina')
+  );
+-- > ANY equivale a: Comparar se o valor é maior do que o MENOR valor retornado pela subconsulta.
 
 -- 6.22
+SELECT c.nome_casa
+FROM casa c
+WHERE EXISTS (
+    SELECT 1
+    FROM aluno a
+    INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+    WHERE a.id_casa = c.id_casa AND m.nota = 10.00
+);
 
 -- 6.23
+SELECT nome
+FROM aluno a
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM compra c
+    WHERE c.id_aluno = a.id_aluno
+);
 
 -- 6.24
+SELECT c.nome_casa, ROUND(AVG(med.media_aluno), 2) AS media_casa
+FROM (
+    SELECT id_aluno, AVG(nota) AS media_aluno
+    FROM matricula
+    GROUP BY id_aluno
+) med
+INNER JOIN aluno a ON med.id_aluno = a.id_aluno
+INNER JOIN casa c ON a.id_casa = c.id_casa
+GROUP BY c.id_casa, c.nome_casa
+ORDER BY media_casa DESC;
 
 -- ---------- Nível 5: UNION ALL ----------
 
 -- 6.25
+SELECT nome, 'Aluno' AS vinculo FROM aluno
+UNION ALL
+SELECT nome, 'Professor' AS vinculo FROM professor
+ORDER BY nome ASC;
 
 -- 6.26
--- Linhas com UNION ALL:
--- Linhas com UNION:
--- Explicação:
+-- UNION ALL:
+SELECT a.nome FROM aluno a INNER JOIN compra c ON a.id_aluno = c.id_aluno
+UNION ALL
+SELECT a.nome FROM aluno a INNER JOIN registro_pontos r ON a.id_aluno = r.id_aluno;
+
+-- UNION:
+SELECT a.nome FROM aluno a INNER JOIN compra c ON a.id_aluno = c.id_aluno
+UNION
+SELECT a.nome FROM aluno a INNER JOIN registro_pontos r ON a.id_aluno = r.id_aluno;
+
+-- Linhas com UNION ALL: 27
+-- Linhas com UNION: 12
+-- Explicação: O UNION ALL preserva todas as linhas resultantes das duas consultas, incluindo duplicatas de um mesmo aluno que fez várias compras ou recebeu múltiplos registros. O UNION remove registros duplicados, retornando apenas nomes distintos.
 
 -- 6.27
+SELECT 'Total de pontos distribuídos' AS indicador, CAST(SUM(pontos) AS CHAR) AS valor FROM registro_pontos
+UNION ALL
+SELECT 'Total de galeões gastos na loja', CAST(SUM(valor_total) AS CHAR) FROM compra
+UNION ALL
+SELECT 'Folha salarial dos professores', CAST(SUM(salario) AS CHAR) FROM professor
+UNION ALL
+SELECT 'Total de galeões nos cofres dos alunos', CAST(SUM(saldo_galeoes) AS CHAR) FROM aluno;
 
 
 -- =====================================================================
