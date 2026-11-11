@@ -299,33 +299,92 @@ WHERE id_disc NOT IN (SELECT DISTINCT id_disc FROM matricula);
 -- 4. TRIGGERS
 -- =====================================================================
 -- Questão 20 - trg_pontos_casa
+DELIMITER $$
+CREATE TRIGGER trg_pontos_casa
+AFTER INSERT ON registro_pontos
+FOR EACH ROW
+BEGIN
+    DECLARE v_id_casa INT;
+    SELECT id_casa INTO v_id_casa FROM aluno WHERE id_aluno = NEW.id_aluno;
+    IF v_id_casa IS NOT NULL THEN
+        UPDATE casa
+        SET pontos = pontos + NEW.pontos
+        WHERE id_casa = v_id_casa;
+    END IF;
+END$$
+DELIMITER ;
 
 -- Questão 21 - trg_valida_compra
+DELIMITER $$
+CREATE TRIGGER trg_valida_compra
+BEFORE INSERT ON compra
+FOR EACH ROW
+BEGIN
+    DECLARE v_estoque INT;
+    DECLARE v_preco DECIMAL(10,2);
+    DECLARE v_saldo DECIMAL(10,2);
+    
+    SELECT estoque, preco INTO v_estoque, v_preco FROM produto WHERE id_produto = NEW.id_produto;
+    SELECT saldo_galeoes INTO v_saldo FROM aluno WHERE id_aluno = NEW.id_aluno;
+    
+    IF v_estoque < NEW.quantidade THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Estoque insuficiente no Beco Diagonal';
+    ELSEIF v_saldo < (v_preco * NEW.quantidade) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Galeões insuficientes no cofre do aluno';
+    ELSE
+        SET NEW.valor_total = v_preco * NEW.quantidade;
+    END IF;
+END$$
+DELIMITER ;
 
 -- Questão 22 - trg_baixa_compra
+DELIMITER $$
+CREATE TRIGGER trg_baixa_compra
+AFTER INSERT ON compra
+FOR EACH ROW
+BEGIN
+    UPDATE produto
+    SET estoque = estoque - NEW.quantidade
+    WHERE id_produto = NEW.id_produto;
+    
+    UPDATE aluno
+    SET saldo_galeoes = saldo_galeoes - NEW.valor_total
+    WHERE id_aluno = NEW.id_aluno;
+END$$
+DELIMITER ;
 
 -- Questão 23 - trg_situacao_nota
+DELIMITER $$
+CREATE TRIGGER trg_situacao_nota
+BEFORE UPDATE ON matricula
+FOR EACH ROW
+BEGIN
+    IF NEW.nota <> OLD.nota THEN
+        IF NEW.nota >= 6.0 THEN
+            SET NEW.situacao = 'Aprovado';
+        ELSE
+            SET NEW.situacao = 'Reprovado';
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
 
 -- Questão 24 - trg_audita_salario
-
--- Pergunta para pensar: por que a validação é BEFORE e a baixa é AFTER?
--- Resposta:
-
--- Questão 25 - INSERT registro_pontos
-
--- Questão 25 - INSERT compra
-
--- Questão 25 - Rony tenta comprar a Nimbus
--- Resultado:
-
--- Questão 25 - Hermione tenta comprar o caldeirão
--- Resultado:
-
--- Questão 25 - Recuperação do Rony em Poções
-
--- Questão 25 - Salário e data de admissão do Hagrid
--- Linhas em log_auditoria:
--- Por que o reajuste da questão 10 não aparece:
+DELIMITER $$
+CREATE TRIGGER trg_audita_salario
+AFTER UPDATE ON professor
+FOR EACH ROW
+BEGIN
+    IF OLD.salario <> NEW.salario THEN
+        INSERT INTO log_auditoria (tabela, operacao, descricao)
+        VALUES (
+            'professor',
+            'UPDATE',
+            CONCAT(NEW.nome, ': salário de ', OLD.salario, ' para ', NEW.salario)
+        );
+    END IF;
+END$$
+DELIMITER ;
 
 
 -- =====================================================================
