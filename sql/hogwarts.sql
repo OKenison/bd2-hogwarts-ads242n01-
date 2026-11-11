@@ -681,22 +681,82 @@ SELECT 'Total de galeões nos cofres dos alunos', CAST(SUM(saldo_galeoes) AS CHA
 -- 7. VIEWS
 -- =====================================================================
 -- Questão 31
+CREATE VIEW vw_placar_casas AS
+SELECT nome_casa, pontos
+FROM casa
+ORDER BY pontos DESC;
 
 -- Questão 32
+CREATE VIEW vw_boletim AS
+SELECT a.nome AS aluno,
+       COALESCE(c.nome_casa, 'Sem casa') AS casa,
+       d.nome_disc AS disciplina,
+       COALESCE(p.nome, 'Sem professor') AS professor,
+       m.nota,
+       m.situacao
+FROM matricula m
+INNER JOIN aluno a ON m.id_aluno = a.id_aluno
+LEFT JOIN casa c ON a.id_casa = c.id_casa
+INNER JOIN disciplina d ON m.id_disc = d.id_disc
+LEFT JOIN professor p ON d.id_prof = p.id_prof;
 
 -- Questão 33
+CREATE VIEW vw_extrato_loja AS
+SELECT a.nome AS aluno,
+       p.nome_produto AS produto,
+       p.loja,
+       c.quantidade,
+       c.valor_total,
+       c.data_compra
+FROM compra c
+INNER JOIN aluno a ON c.id_aluno = a.id_aluno
+INNER JOIN produto p ON c.id_produto = p.id_produto;
 
 -- Questão 34
+CREATE VIEW vw_alunos_destaque AS
+SELECT a.nome AS aluno,
+       c.nome_casa AS casa,
+       ROUND(AVG(m.nota), 2) AS media_nota
+FROM aluno a
+INNER JOIN casa c ON a.id_casa = c.id_casa
+INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+GROUP BY a.id_aluno, a.nome, c.nome_casa
+HAVING AVG(m.nota) >= 8.0;
 
 -- Questão 35
+CREATE VIEW vw_quadro_professores AS
+SELECT p.nome AS professor,
+       COALESCE(c.nome_casa, 'Não é diretor') AS casa_que_dirige,
+       (SELECT COUNT(*) FROM disciplina d WHERE d.id_prof = p.id_prof) AS qtd_disciplinas,
+       COALESCE((SELECT SUM(r.pontos) FROM registro_pontos r WHERE r.id_prof = p.id_prof), 0) AS total_pontos_concedidos
+FROM professor p
+LEFT JOIN casa c ON p.id_casa = c.id_casa;
 
 -- Questão 36
+SELECT * FROM vw_placar_casas;
+
+SELECT * FROM vw_boletim WHERE casa = 'Corvinal';
+
+SELECT loja, SUM(valor_total) AS total_faturado
+FROM vw_extrato_loja
+GROUP BY loja;
+
+SELECT * FROM vw_alunos_destaque ORDER BY media_nota DESC;
+
+SELECT * FROM vw_quadro_professores ORDER BY total_pontos_concedidos DESC;
 
 -- Questão 37
--- O que mudou e por quê:
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (11, 1, 20, 'Venceu a primeira tarefa do Torneio', '2026-11-10');
+
+SELECT * FROM vw_placar_casas;
+-- O que mudou e por quê: Os pontos da Lufa-Lufa subiram de 50 para 70. Isso ocorre porque a view é um objeto dinâmico (uma consulta salva que roda em tempo de execução); ao inserir o registro de pontos, a trigger `trg_pontos_casa` atualizou a tabela física `casa`, refletindo imediatamente o novo placar na visualização da view.
 
 -- Questão 38
-
+CREATE OR REPLACE VIEW vw_placar_casas AS
+SELECT nome_casa, fundador, pontos
+FROM casa
+ORDER BY pontos DESC;
 
 -- =====================================================================
 -- 8. CONTROLE DE ACESSO (DCL)
