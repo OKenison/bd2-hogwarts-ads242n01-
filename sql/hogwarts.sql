@@ -260,26 +260,39 @@ WHERE loja = 'Dedosdemel';
 -- 3. REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
 -- =====================================================================
 -- Questão 13
--- Erro:
--- Explicação:
+-- DELETE FROM casa WHERE nome_casa = 'Sonserina';
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (`hogwarts`.`aluno`, CONSTRAINT `aluno_ibfk_1` FOREIGN KEY (`id_casa`) REFERENCES `casa` (`id_casa`))
+-- Explicação: A exclusão foi negada devido à restrição de chave estrangeira (FOREIGN KEY). Existem registros nas tabelas filhas (como `aluno` e `professor`) que referenciam o `id_casa` da Sonserina. Para excluir a casa, seria necessário antes remover ou atualizar as referências nas tabelas vinculadas.
 
 -- Questão 14
--- Erro:
--- Explicação:
+-- INSERT INTO aluno (nome, ano_escolar, id_casa, saldo_galeoes) VALUES ('Dobby', 8, 1, 0.00);
+-- Erro: Error Code: 3819. Check constraint 'aluno_chk_1' is violated.
+-- Explicação: O comando violou a restrição CHECK (ano_escolar BETWEEN 1 AND 7) definida na criação da tabela `aluno`, pois tentou-se cadastrar o valor 8 para a coluna `ano_escolar`.
 
 -- Questão 15
--- Erro:
--- Explicação:
+-- INSERT INTO aluno (nome, ano_escolar, id_casa, saldo_galeoes, email) VALUES ('Harry Potter (Polissuco)', 5, 1, 0.00, 'harry.potter@hogwarts.edu');
+-- Erro: Error Code: 1062. Duplicate entry 'harry.potter@hogwarts.edu' for key 'aluno.uq_aluno_email'
+-- Explicação: O comando falhou porque o e-mail 'harry.potter@hogwarts.edu' já existe na tabela `aluno`. A restrição UNIQUE (`uq_aluno_email`) impede a inserção de valores duplicados nessa coluna.
 
 -- Questão 16
--- Erro:
--- Explicação:
+-- DELETE FROM professor WHERE nome = 'Severo Snape';
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (`hogwarts`.`disciplina`, CONSTRAINT `disciplina_ibfk_1` FOREIGN KEY (`id_prof`) REFERENCES `professor` (`id_prof`))
+-- Explicação: A exclusão falhou por restrição de integridade referencial (FOREIGN KEY), pois Severo Snape está cadastrado como professor da disciplina de Poções na tabela `disciplina`.
 
 -- Questão 17
+DELETE FROM professor WHERE nome = 'Gilderoy Lockhart';
+-- Explicação: O comando funcionou perfeitamente porque Gilderoy Lockhart não estava associado como chave estrangeira (`id_prof`) a nenhuma disciplina cadastrada na tabela `disciplina` (a disciplina de Defesa Contra as Artes das Trevas está vinculada ao professor Remo Lupin no cadastro inicial).
 
 -- Questão 18
+DELETE FROM matricula
+WHERE id_aluno IN (SELECT id_aluno FROM aluno WHERE nome = 'Vicente Crabbe');
+
+DELETE FROM aluno
+WHERE nome = 'Vicente Crabbe';
 
 -- Questão 19
+DELETE FROM disciplina
+WHERE id_disc NOT IN (SELECT DISTINCT id_disc FROM matricula);
 
 
 -- =====================================================================
