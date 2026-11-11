@@ -9,7 +9,6 @@
 
 | Nome | Matrícula | Usuário do GitHub |
 | Francisco Kenison da Silva Monteiro | 2415681 | OKenison |
-|  |  |  |
 
 ## O cenário
 
