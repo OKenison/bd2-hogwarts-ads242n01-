@@ -3,8 +3,8 @@
 -- Disciplina: Manipulação de Dados / Banco de Dados II (ADS242N01)
 -- Professor: Aguinaldo Neto
 --
--- Aluno:
--- Matrícula:
+-- Aluno: Francisco Kenison da Silva Monteiro
+-- Matrícula: 2415681
 --
 -- Escreva cada resposta logo abaixo do comentário da questão.
 -- Comandos que a atividade pede para FALHAR devem ficar comentados,
